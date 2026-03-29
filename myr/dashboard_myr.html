@@ -3,726 +3,1221 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MYR·FX Terminal</title>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<title>MYR Exchange Terminal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  --bg:#080c10;--panel:#0d1520;--border:#1a2d45;
-  --accent:#00e5ff;--green:#00ff99;--amber:#ffb300;--red:#ff3d5a;
-  --text:#c8dae8;--dim:#4a6580;
-  --mono:'Share Tech Mono',monospace;--head:'Rajdhani',sans-serif;
+:root {
+  --bg: #060a0e;
+  --panel: #0b1520;
+  --panel2: #0d1a28;
+  --border: #162840;
+  --accent: #00e5ff;
+  --green: #00ff99;
+  --amber: #ffb300;
+  --red: #ff3d5a;
+  --text: #bdd4e8;
+  --dim: #3a5570;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Rajdhani', sans-serif;
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;overflow:hidden;}
-body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:9999;}
- 
-/* LOADING */
-#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10000;transition:opacity .5s;}
-.ld-logo{font-family:var(--head);font-size:3.5rem;font-weight:700;color:var(--accent);letter-spacing:10px;text-shadow:0 0 40px rgba(0,229,255,.5);}
-.ld-bar{width:300px;height:1px;background:var(--border);overflow:hidden;}
-.ld-prog{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));animation:ldprog 2.4s ease-in-out forwards;}
-@keyframes ldprog{0%{width:0}100%{width:100%}}
-.ld-msg{font-size:.6rem;color:var(--dim);letter-spacing:3px;animation:fpulse 1s ease-in-out infinite;}
-@keyframes fpulse{0%,100%{opacity:.3}50%{opacity:1}}
- 
-/* HEADER */
-header{display:flex;align-items:center;justify-content:space-between;padding:10px 22px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,#080c10,#0a1420);height:52px;flex-shrink:0;}
-.logo-badge{font-family:var(--head);font-size:1.5rem;font-weight:700;color:var(--accent);letter-spacing:4px;text-shadow:0 0 18px rgba(0,229,255,.5);}
-.logo-sub{font-size:.5rem;color:var(--dim);letter-spacing:2px;}
-#hstats{display:flex;gap:20px;}
-.hst{text-align:center;}
-.hst-v{font-size:.75rem;}
-.hst-l{font-size:.48rem;color:var(--dim);letter-spacing:1px;}
-.hdr-r{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
-#liveDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.4s ease-in-out infinite;margin-right:5px;vertical-align:middle;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-#clock{font-size:.7rem;color:var(--accent);}
-#cdown{font-size:.52rem;color:var(--dim);}
- 
-/* TICKER */
-.ticker-wrap{overflow:hidden;background:#060a0e;border-bottom:1px solid var(--border);height:30px;display:flex;align-items:center;}
-.ticker-inner{display:flex;animation:tickscroll 40s linear infinite;white-space:nowrap;}
-@keyframes tickscroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.tk-item{display:inline-flex;align-items:center;gap:6px;padding:0 20px;font-size:.67rem;border-right:1px solid var(--border);}
-.tk-code{color:var(--amber);}
-.tk-chg{font-size:.59rem;}
-.tk-chg.up{color:var(--green);}
-.tk-chg.dn{color:var(--red);}
- 
-/* MAIN LAYOUT */
-.layout{display:grid;grid-template-columns:232px 1fr;height:calc(100vh - 52px - 30px - 26px);}
- 
-/* SIDEBAR */
-.sidebar{border-right:1px solid var(--border);display:flex;flex-direction:column;background:#080c10;overflow:hidden;}
-.sb-head{font-size:.52rem;letter-spacing:3px;color:var(--dim);padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.sb-list{flex:1;overflow-y:auto;}
-.c-card{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(26,45,69,.4);cursor:pointer;transition:background .15s;position:relative;}
-.c-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--cc,var(--dim));opacity:0;transition:opacity .15s;}
-.c-card.on::before{opacity:1;}
-.c-card.on{background:rgba(13,21,32,.9);}
-.c-card:hover{background:#0a1520;}
-.c-chk{width:12px;height:12px;border:1px solid var(--cc,var(--dim));border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;transition:all .15s;}
-.c-card.on .c-chk{background:var(--cc);color:#000;}
-.c-info{flex:1;min-width:0;}
-.c-code{font-size:.7rem;font-weight:bold;color:var(--cc,var(--text));}
-.c-name{font-size:.52rem;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.c-data{text-align:right;flex-shrink:0;}
-.c-rate{font-size:.67rem;}
-.c-chg{font-size:.52rem;}
-.c-chg.up{color:var(--green);}
-.c-chg.dn{color:var(--red);}
- 
-/* WORKSPACE */
-.workspace{display:flex;flex-direction:column;overflow:hidden;}
- 
-/* TOOLBAR */
-.toolbar{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--border);background:#080c10;height:38px;flex-shrink:0;}
-.tl,.tr{display:flex;align-items:center;gap:5px;}
-.ct-title{font-family:var(--head);font-size:.85rem;font-weight:500;color:var(--accent);letter-spacing:2px;margin-right:4px;}
-.tbtn{background:transparent;border:1px solid var(--border);color:var(--dim);font-family:var(--mono);font-size:.58rem;padding:4px 9px;cursor:pointer;letter-spacing:.5px;transition:all .15s;border-radius:2px;white-space:nowrap;}
-.tbtn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.04);}
-.tbtn.on{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.07);}
-.tbtn.sel-on{border-color:var(--amber);color:var(--amber);background:rgba(255,179,0,.07);}
-.tbtn.dng{border-color:var(--red);color:var(--red);}
-.tbtn.dng:hover{background:rgba(255,61,90,.07);}
-.mode-pill{font-size:.5rem;padding:2px 8px;border-radius:10px;letter-spacing:1px;}
-.mode-pill.pz{background:rgba(0,229,255,.1);color:var(--accent);border:1px solid rgba(0,229,255,.3);}
-.mode-pill.sel{background:rgba(255,179,0,.1);color:var(--amber);border:1px solid rgba(255,179,0,.3);}
- 
-/* CHART CONTAINER */
-.chart-cont{flex:1;position:relative;overflow:hidden;min-height:0;}
-#cc{position:absolute;top:0;left:0;width:100%;height:100%;}
- 
-/* SELECTION OVERLAY */
-#selOv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;}
-#selOv.active{pointer-events:auto;cursor:crosshair;}
-#selBox{position:absolute;display:none;pointer-events:none;background:rgba(255,179,0,.06);}
-#selLn1,#selLn2{position:absolute;display:none;top:0;bottom:0;width:1px;background:var(--amber);opacity:.65;pointer-events:none;}
- 
-/* SELECTION STATS */
-#selStats{position:absolute;z-index:20;display:none;background:#0b1622;border:1px solid var(--border);padding:10px 14px;min-width:190px;max-width:250px;font-size:.62rem;line-height:1.9;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none;}
-.ssh{font-size:.5rem;color:var(--dim);letter-spacing:2px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border);}
-.ssr{display:flex;align-items:center;gap:6px;margin-bottom:1px;}
-.ssr-c{min-width:30px;font-weight:bold;font-size:.62rem;}
-.ssr-n{flex:1;font-size:.58rem;color:var(--dim);}
-.ssr-p{font-size:.62rem;min-width:68px;text-align:right;}
-.ssr-p.up{color:var(--green);}
-.ssr-p.dn{color:var(--red);}
- 
-/* NEWS OVERLAY */
-#newsOv{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9;}
-.nm{position:absolute;transform:translateX(-50%);pointer-events:auto;cursor:pointer;}
-.nm:hover .nmf{transform:scale(1.4);}
-.nmf{width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;transition:transform .15s;}
-.nmf.pos{background:rgba(0,255,153,.15);border:1px solid var(--green);color:var(--green);}
-.nmf.neg{background:rgba(255,61,90,.15);border:1px solid var(--red);color:var(--red);}
-.nmf.neu{background:rgba(255,179,0,.15);border:1px solid var(--amber);color:var(--amber);}
-.nm-st{width:1px;margin:0 auto;opacity:.25;}
- 
-/* RANGE BAR */
-.range-bar{padding:7px 14px 8px;border-top:1px solid var(--border);background:#060a0e;flex-shrink:0;}
-.rp-row{display:flex;gap:3px;margin-bottom:7px;}
-.rp-btn{flex:1;background:transparent;border:1px solid var(--border);color:var(--dim);font-family:var(--mono);font-size:.56rem;padding:4px 0;cursor:pointer;transition:all .15s;}
-.rp-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.06);}
-.rp-btn:hover:not(.on){border-color:var(--dim);color:var(--text);}
-.sl-row{display:flex;align-items:center;gap:10px;}
-.sl-lbl{font-size:.52rem;color:var(--dim);white-space:nowrap;}
-input[type=range].rdial{flex:1;-webkit-appearance:none;appearance:none;height:2px;background:var(--border);outline:none;cursor:pointer;}
-input[type=range].rdial::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(0,229,255,.5);border:2px solid #080c10;cursor:pointer;}
- 
-/* NEWS PANEL */
-#newsPanel{position:fixed;top:0;right:-420px;bottom:0;width:400px;background:#0b1622;border-left:1px solid var(--border);transition:right .3s ease;z-index:500;display:flex;flex-direction:column;box-shadow:-6px 0 30px rgba(0,0,0,.6);}
-#newsPanel.open{right:0;}
-.nph{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.np-title{font-family:var(--head);font-size:.95rem;font-weight:500;color:var(--accent);letter-spacing:2px;}
-.np-close{background:none;border:1px solid var(--border);color:var(--dim);font-family:var(--mono);font-size:.6rem;padding:4px 10px;cursor:pointer;}
-.np-close:hover{border-color:var(--red);color:var(--red);}
-.npb{flex:1;overflow-y:auto;padding:18px;}
-.np-dt{font-size:.55rem;color:var(--dim);letter-spacing:1px;margin-bottom:8px;}
-.np-sent{display:inline-flex;align-items:center;gap:5px;font-size:.58rem;padding:2px 9px;border-radius:2px;margin-bottom:10px;}
-.np-sent.pos{background:rgba(0,255,153,.08);color:var(--green);border:1px solid rgba(0,255,153,.25);}
-.np-sent.neg{background:rgba(255,61,90,.08);color:var(--red);border:1px solid rgba(255,61,90,.25);}
-.np-sent.neu{background:rgba(255,179,0,.08);color:var(--amber);border:1px solid rgba(255,179,0,.25);}
-.np-ttl{font-size:.82rem;line-height:1.55;color:var(--text);margin-bottom:11px;}
-.np-desc{font-size:.65rem;color:var(--dim);line-height:1.75;margin-bottom:14px;}
-.np-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
-.np-tag{font-size:.52rem;padding:2px 7px;border:1px solid var(--border);color:var(--dim);}
-.np-tag.hit{border-color:var(--accent);color:var(--accent);}
-.np-acts{display:flex;gap:8px;}
-.np-btn{flex:1;padding:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:var(--mono);font-size:.62rem;cursor:pointer;transition:all .15s;}
-.np-btn:hover{border-color:var(--accent);color:var(--accent);}
-.np-btn.starred{color:var(--amber);border-color:var(--amber);}
-.np-btn.go{border-color:var(--green);color:var(--green);}
- 
-/* STATUSBAR */
-.statusbar{display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:26px;border-top:1px solid var(--border);background:#060a0e;font-size:.52rem;color:var(--dim);}
-.sb-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);margin-right:5px;}
- 
-::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--border);}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  display: flex;
+  flex-direction: column;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+  pointer-events:none;
+  z-index:9998;
+}
+
+/* ── HEADER ── */
+header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 20px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,#060a0e,#0b1828);
+  flex-shrink:0;
+}
+.logo-badge { font-family:var(--head); font-size:1.6rem; font-weight:700; color:var(--accent); letter-spacing:4px; text-shadow:0 0 20px rgba(0,229,255,0.5); }
+.logo-sub { font-size:0.55rem; color:var(--dim); letter-spacing:2px; margin-top:2px; }
+.header-right { display:flex; align-items:center; gap:20px; }
+.live-indicator { display:flex; align-items:center; gap:7px; }
+#live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 1.4s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+#clock { font-size:0.7rem; color:var(--accent); letter-spacing:1px; }
+#refresh-bar-wrap { display:flex; align-items:center; gap:8px; }
+#refresh-bar-track { width:80px; height:2px; background:var(--border); border-radius:1px; overflow:hidden; }
+#refresh-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); width:100%; transition:width 1s linear; }
+#refresh-label { font-size:0.55rem; color:var(--dim); letter-spacing:1px; }
+
+/* ── TICKER ── */
+.ticker-wrap { overflow:hidden; background:#050810; border-bottom:1px solid var(--border); padding:5px 0; flex-shrink:0; }
+.ticker-inner { display:flex; animation:scroll 35s linear infinite; white-space:nowrap; }
+@keyframes scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ticker-item { display:inline-flex; align-items:center; gap:7px; padding:0 24px; font-size:0.68rem; border-right:1px solid var(--border); }
+.t-code { color:var(--amber); font-weight:bold; }
+.t-val { color:var(--text); }
+.t-chg.up { color:var(--green); }
+.t-chg.dn { color:var(--red); }
+
+/* ── LAYOUT ── */
+.workspace {
+  display:grid;
+  grid-template-columns:230px 1fr 280px;
+  flex:1;
+  min-height:0;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:#060a0e;
+}
+.sidebar-head {
+  padding:12px 14px 8px;
+  font-size:0.55rem;
+  letter-spacing:3px;
+  color:var(--dim);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.currency-list { overflow-y:auto; flex:1; padding:8px; }
+.currency-list::-webkit-scrollbar { width:3px; }
+.currency-list::-webkit-scrollbar-thumb { background:var(--border); }
+
+.c-card {
+  display:flex; align-items:center; gap:8px;
+  padding:9px 10px;
+  border:1px solid transparent;
+  border-radius:3px;
+  margin-bottom:5px;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  transition:border-color 0.15s, background 0.15s;
+}
+.c-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--c); opacity:0.4; transition:opacity 0.15s; }
+.c-card.on { border-color:var(--border); background:var(--panel); }
+.c-card.on::before { opacity:1; }
+.c-card:hover { border-color:var(--border); background:#090f18; }
+.c-toggle { width:12px; height:12px; border:1px solid var(--c); border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; color:var(--c); transition:all 0.12s; }
+.c-card.on .c-toggle { background:var(--c); color:#000; }
+.c-info { flex:1; min-width:0; }
+.c-code { font-size:0.72rem; font-weight:bold; color:var(--c); letter-spacing:1px; }
+.c-name { font-size:0.52rem; color:var(--dim); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.c-right { text-align:right; flex-shrink:0; }
+.c-rate { font-size:0.75rem; color:var(--text); }
+.c-chg { font-size:0.55rem; margin-top:1px; }
+.c-chg.up { color:var(--green); }
+.c-chg.dn { color:var(--red); }
+
+/* ── CHART AREA ── */
+.chart-area {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  padding:14px 16px 10px;
+  gap:10px;
+}
+
+/* controls row */
+.chart-top {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.chart-title { font-family:var(--head); font-size:0.95rem; font-weight:500; color:var(--accent); letter-spacing:2px; }
+
+.mode-btns { display:flex; gap:5px; }
+.mode-btn {
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--dim);
+  font-family:var(--mono);
+  font-size:0.58rem;
+  padding:4px 10px;
+  cursor:pointer;
+  letter-spacing:1px;
+  transition:all 0.12s;
+  border-radius:2px;
+}
+.mode-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,0.07); }
+.mode-btn.warn.active { border-color:var(--amber); color:var(--amber); background:rgba(255,179,0,0.07); }
+#reset-zoom-btn {
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--dim);
+  font-family:var(--mono);
+  font-size:0.58rem;
+  padding:4px 10px;
+  cursor:pointer;
+  letter-spacing:1px;
+  transition:all 0.12s;
+  border-radius:2px;
+}
+#reset-zoom-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* time slider */
+.time-slider-wrap {
+  flex-shrink:0;
+  padding:4px 2px 0;
+}
+.slider-labels {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:4px;
+}
+.slider-label {
+  font-size:0.55rem;
+  color:var(--dim);
+  letter-spacing:1px;
+  cursor:pointer;
+  padding:2px 4px;
+  transition:color 0.12s;
+}
+.slider-label.active { color:var(--accent); }
+input[type=range]#time-slider {
+  -webkit-appearance:none;
+  width:100%;
+  height:3px;
+  background: var(--border);
+  border-radius:2px;
+  outline:none;
+  cursor:pointer;
+}
+input[type=range]#time-slider::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  width:14px; height:14px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 8px rgba(0,229,255,0.6);
+  cursor:pointer;
+  transition:transform 0.12s;
+}
+input[type=range]#time-slider::-webkit-slider-thumb:active { transform:scale(1.3); }
+
+/* chart canvas wrap */
+.chart-wrap {
+  flex:1;
+  min-height:0;
+  position:relative;
+}
+.chart-wrap canvas { position:absolute; top:0; left:0; width:100%!important; height:100%!important; }
+#overlay-canvas { pointer-events:none; z-index:10; }
+
+/* measure stats */
+#measure-stats {
+  position:absolute;
+  top:28px; right:10px;
+  background:rgba(11,21,32,0.95);
+  border:1px solid var(--border);
+  border-left:2px solid var(--amber);
+  padding:10px 14px;
+  font-size:0.62rem;
+  z-index:20;
+  min-width:180px;
+  display:none;
+  backdrop-filter:blur(4px);
+}
+#measure-stats .ms-head { color:var(--amber); letter-spacing:1px; margin-bottom:8px; font-size:0.6rem; }
+#measure-stats .ms-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:12px; }
+#measure-stats .ms-code { color:var(--dim); }
+#measure-stats .ms-val { font-weight:bold; }
+#measure-stats .ms-val.up { color:var(--green); }
+#measure-stats .ms-val.dn { color:var(--red); }
+#measure-stats .ms-period { color:var(--dim); font-size:0.55rem; margin-bottom:8px; }
+
+/* ── NEWS PANEL ── */
+.news-panel {
+  border-left:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:#060a0e;
+  transition:transform 0.25s ease;
+}
+.news-panel-head {
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.news-panel-title { font-size:0.55rem; letter-spacing:3px; color:var(--dim); }
+.news-count { font-size:0.6rem; color:var(--amber); }
+.news-list { overflow-y:auto; flex:1; padding:8px; }
+.news-list::-webkit-scrollbar { width:3px; }
+.news-list::-webkit-scrollbar-thumb { background:var(--border); }
+
+.news-card {
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:10px 12px;
+  margin-bottom:8px;
+  cursor:pointer;
+  transition:border-color 0.15s, background 0.15s;
+  position:relative;
+}
+.news-card:hover { border-color:var(--amber); background:var(--panel); }
+.news-card.highlighted { border-color:var(--amber); background:rgba(255,179,0,0.05); }
+.nc-date { font-size:0.55rem; color:var(--dim); letter-spacing:1px; margin-bottom:4px; }
+.nc-source { font-size:0.5rem; color:var(--accent); letter-spacing:1px; }
+.nc-title { font-size:0.65rem; color:var(--text); line-height:1.4; margin:5px 0; }
+.nc-excerpt { font-size:0.58rem; color:var(--dim); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.nc-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+.nc-link { font-size:0.55rem; color:var(--accent); text-decoration:none; letter-spacing:1px; }
+.nc-link:hover { text-decoration:underline; }
+.star-btn {
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--dim);
+  font-size:0.6rem;
+  padding:3px 8px;
+  cursor:pointer;
+  font-family:var(--mono);
+  border-radius:2px;
+  transition:all 0.12s;
+  letter-spacing:1px;
+}
+.star-btn.starred { border-color:var(--amber); color:var(--amber); background:rgba(255,179,0,0.1); }
+.star-btn:hover { border-color:var(--amber); color:var(--amber); }
+.relevance-badge {
+  position:absolute;
+  top:8px; right:8px;
+  font-size:0.5rem;
+  padding:1px 5px;
+  border-radius:1px;
+  letter-spacing:1px;
+}
+.rel-high { background:rgba(0,255,153,0.15); color:var(--green); border:1px solid rgba(0,255,153,0.3); }
+.rel-med { background:rgba(255,179,0,0.12); color:var(--amber); border:1px solid rgba(255,179,0,0.3); }
+
+/* news filter tabs */
+.news-filter { display:flex; gap:4px; padding:6px 8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.nf-tab { background:transparent; border:1px solid transparent; color:var(--dim); font-family:var(--mono); font-size:0.55rem; padding:3px 8px; cursor:pointer; letter-spacing:1px; transition:all 0.12s; border-radius:2px; }
+.nf-tab.active { border-color:var(--border); color:var(--text); }
+
+/* ── STATUSBAR ── */
+.statusbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:4px 20px;
+  border-top:1px solid var(--border);
+  background:#050810;
+  font-size:0.55rem;
+  color:var(--dim);
+  letter-spacing:1px;
+  flex-shrink:0;
+}
+.sb-dot { width:5px; height:5px; border-radius:50%; background:var(--green); box-shadow:0 0 4px var(--green); display:inline-block; margin-right:5px; }
+
+/* ── LOADING ── */
+#loading {
+  position:fixed; inset:0;
+  background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  z-index:9999;
+  transition:opacity 0.5s;
+}
+.load-logo { font-family:var(--head); font-size:3.5rem; font-weight:700; color:var(--accent); letter-spacing:10px; text-shadow:0 0 50px rgba(0,229,255,0.4); }
+.load-bar { width:280px; height:2px; background:var(--border); overflow:hidden; }
+.load-prog { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); width:0%; transition:width 0.3s ease; }
+.load-txt { font-size:0.6rem; color:var(--dim); letter-spacing:3px; }
 </style>
 </head>
 <body>
- 
+
 <div id="loading">
-  <div class="ld-logo">MYR·FX</div>
-  <div class="ld-bar"><div class="ld-prog"></div></div>
-  <div class="ld-msg" id="ldMsg">INITIALIZING...</div>
+  <div class="load-logo">MYR</div>
+  <div class="load-bar"><div class="load-prog" id="load-prog"></div></div>
+  <div class="load-txt" id="load-txt">INITIALIZING TERMINAL...</div>
 </div>
- 
+
 <header>
   <div>
-    <div class="logo-badge">MYR·FX</div>
-    <div class="logo-sub">RINGGIT EXCHANGE TERMINAL · LIVE</div>
+    <div class="logo-badge">MYR TERMINAL</div>
+    <div class="logo-sub">RINGGIT EXCHANGE MONITOR · LIVE DATA · v2.0</div>
   </div>
-  <div id="hstats"></div>
-  <div class="hdr-r">
-    <div><span id="liveDot"></span><span id="clock">--:--:--</span></div>
-    <div id="cdown">REFRESH IN --s</div>
+  <div class="header-right">
+    <div id="refresh-bar-wrap">
+      <span id="refresh-label">60s</span>
+      <div id="refresh-bar-track"><div id="refresh-bar-fill"></div></div>
+    </div>
+    <div class="live-indicator">
+      <div id="live-dot"></div>
+      <span id="clock">--:--:--</span>
+    </div>
   </div>
 </header>
- 
+
 <div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
- 
-<div class="layout">
-  <aside class="sidebar">
-    <div class="sb-head">CURRENCIES / MYR</div>
-    <div class="sb-list" id="cList"></div>
-  </aside>
- 
-  <div class="workspace">
-    <div class="toolbar">
-      <div class="tl">
-        <span class="ct-title">1 UNIT → MYR</span>
-        <span class="mode-pill pz" id="modePill">PAN · ZOOM</span>
-        <button class="tbtn" id="btnSel">⊡ SELECT RANGE</button>
-        <button class="tbtn on" id="btnNews">📰 NEWS</button>
-      </div>
-      <div class="tr">
-        <button class="tbtn" id="btnZI">＋ ZOOM</button>
-        <button class="tbtn" id="btnZO">－ ZOOM</button>
-        <button class="tbtn dng" id="btnRst">↺ RESET VIEW</button>
+
+<div class="workspace">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-head">CURRENCIES vs MYR</div>
+    <div class="currency-list" id="currency-list"></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-area">
+    <div class="chart-top">
+      <div class="chart-title">EXCHANGE RATE HISTORY</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="mode-btn active" id="btn-zoom">⊕ ZOOM/PAN</button>
+        <button class="mode-btn warn" id="btn-measure">⊞ MEASURE</button>
+        <button id="reset-zoom-btn">↺ RESET</button>
       </div>
     </div>
- 
-    <div class="chart-cont" id="chartCont">
-      <canvas id="cc"></canvas>
-      <div id="selOv">
-        <div id="selBox"></div>
-        <div id="selLn1"></div>
-        <div id="selLn2"></div>
-      </div>
-      <div id="selStats"><div class="ssh">RANGE ANALYSIS</div><div id="ssContent"></div></div>
-      <div id="newsOv"></div>
+
+    <!-- Time Range Slider -->
+    <div class="time-slider-wrap">
+      <div class="slider-labels" id="slider-labels"></div>
+      <input type="range" id="time-slider" min="0" max="7" value="3" step="1"/>
     </div>
- 
-    <div class="range-bar">
-      <div class="rp-row" id="rpRow"></div>
-      <div class="sl-row">
-        <span class="sl-lbl">◀ LIVE</span>
-        <input type="range" class="rdial" id="rdial" min="0" max="8" step="1" value="3"/>
-        <span class="sl-lbl">2 YEARS ▶</span>
-      </div>
+
+    <div class="chart-wrap">
+      <canvas id="main-chart"></canvas>
+      <canvas id="overlay-canvas"></canvas>
+      <div id="measure-stats"></div>
     </div>
   </div>
+
+  <!-- NEWS PANEL -->
+  <div class="news-panel">
+    <div class="news-panel-head">
+      <span class="news-panel-title">MARKET EVENTS &amp; NEWS</span>
+      <span class="news-count" id="news-count">0 items</span>
+    </div>
+    <div class="news-filter">
+      <button class="nf-tab active" data-filter="all">ALL</button>
+      <button class="nf-tab" data-filter="starred">★ STARRED</button>
+      <button class="nf-tab" data-filter="high">HIGH REL</button>
+    </div>
+    <div class="news-list" id="news-list"><div style="padding:20px;text-align:center;color:var(--dim);font-size:0.6rem;letter-spacing:2px;">FETCHING MARKET NEWS...</div></div>
+  </div>
 </div>
- 
+
 <div class="statusbar">
-  <span><span class="sb-dot"></span>RATES: FAWAZAHMED0/ECB · INTRADAY: SIMULATED · NEWS: RSS FEEDS</span>
-  <span id="sbUpd">UPDATED: --</span>
-  <span>BASE: MYR · 6DP PRECISION · SCROLL=ZOOM · DRAG=PAN</span>
+  <span><span class="sb-dot"></span>DATA: FAWAZAHMED0 CURRENCY API (FREE · NO KEY REQUIRED)</span>
+  <span id="last-updated">LAST UPDATE: --</span>
+  <span>BASE: MYR (MALAYSIAN RINGGIT) · 6dp PRECISION</span>
 </div>
- 
-<div id="newsPanel">
-  <div class="nph">
-    <div class="np-title">NEWS EVENT</div>
-    <button class="np-close" onclick="closeNews()">✕ CLOSE</button>
-  </div>
-  <div class="npb" id="npBody"></div>
-</div>
- 
+
 <script>
-// ─── CONSTANTS ───────────────────────────────────
-const CUR = [
-  {code:'USD',name:'US Dollar',         col:'#00e5ff',flag:'🇺🇸'},
-  {code:'GBP',name:'British Pound',     col:'#a78bfa',flag:'🇬🇧'},
-  {code:'EUR',name:'Euro',              col:'#f59e0b',flag:'🇪🇺'},
-  {code:'CNY',name:'Chinese Yuan',      col:'#f87171',flag:'🇨🇳'},
-  {code:'SGD',name:'Singapore Dollar',  col:'#34d399',flag:'🇸🇬'},
-  {code:'AED',name:'UAE Dirham',        col:'#fb923c',flag:'🇦🇪'},
-  {code:'JPY',name:'Japanese Yen',      col:'#e879f9',flag:'🇯🇵'},
-  {code:'AUD',name:'Australian Dollar', col:'#4ade80',flag:'🇦🇺'},
-  {code:'THB',name:'Thai Baht',         col:'#60a5fa',flag:'🇹🇭'},
-  {code:'INR',name:'Indian Rupee',      col:'#fbbf24',flag:'🇮🇳'},
-  {code:'KRW',name:'South Korean Won',  col:'#2dd4bf',flag:'🇰🇷'},
-  {code:'HKD',name:'Hong Kong Dollar',  col:'#f472b6',flag:'🇭🇰'},
+// ════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════
+const CURRENCIES = [
+  { code:'USD', name:'US Dollar',           color:'#00e5ff', flag:'🇺🇸' },
+  { code:'GBP', name:'British Pound',       color:'#a78bfa', flag:'🇬🇧' },
+  { code:'EUR', name:'Euro',                color:'#f59e0b', flag:'🇪🇺' },
+  { code:'CNY', name:'Chinese Yuan',        color:'#f87171', flag:'🇨🇳' },
+  { code:'SGD', name:'Singapore Dollar',    color:'#34d399', flag:'🇸🇬' },
+  { code:'AED', name:'UAE Dirham',          color:'#fb923c', flag:'🇦🇪' },
+  { code:'JPY', name:'Japanese Yen',        color:'#e879f9', flag:'🇯🇵' },
+  { code:'AUD', name:'Australian Dollar',   color:'#4ade80', flag:'🇦🇺' },
+  { code:'THB', name:'Thai Baht',           color:'#60a5fa', flag:'🇹🇭' },
+  { code:'INR', name:'Indian Rupee',        color:'#fbbf24', flag:'🇮🇳' },
+  { code:'KRW', name:'South Korean Won',    color:'#2dd4bf', flag:'🇰🇷' },
+  { code:'HKD', name:'Hong Kong Dollar',    color:'#f472b6', flag:'🇭🇰' },
 ];
-const RANGES = [
-  {l:'LIVE',d:0},{l:'3D',d:3},{l:'1W',d:7},{l:'2W',d:14},
-  {l:'1M',d:30},{l:'3M',d:90},{l:'6M',d:180},{l:'1Y',d:365},{l:'2Y',d:730},
+
+const RANGE_OPTIONS = [
+  { label:'3D',  days:3   },
+  { label:'7D',  days:7   },
+  { label:'14D', days:14  },
+  { label:'1M',  days:30  },
+  { label:'3M',  days:90  },
+  { label:'6M',  days:180 },
+  { label:'1Y',  days:365 },
+  { label:'2Y',  days:730 },
 ];
-const MYR_KW = ['ringgit','myr','forex','bank negara','malaysia economy','exchange rate',
-  'malaysia trade','gdp malaysia','palm oil','oil malaysia','inflation malaysia',
-  'fdi malaysia','interest rate malaysia','malaysia budget','currency malaysia','ringgit exchange'];
-const POS_W = ['deal','growth','surplus','investment','expansion','record','upgrade','boost',
-  'rally','gain','agreement','partnership','discovery','reserve','inflow'];
-const NEG_W = ['deficit','debt','sanction','corruption','fraud','scandal','recession','crash',
-  'plunge','downgrade','crisis','conflict','fall','decline','drop','loss'];
-const RSS = [
-  'https://www.theguardian.com/world/malaysia/rss',
-  'https://www.freemalaysiatoday.com/feed/',
+
+const MYR_KEYWORDS = [
+  'ringgit','myr','malaysia','bank negara','malaysian','forex','currency',
+  'exchange rate','kuala lumpur','petronas','tariff','interest rate',
+  'inflation','recession','trade','export','gdp','investment','imf',
+  'world bank','federal reserve','fed rate','oil','crude','palm oil',
+  'semiconductor','intel','sanction','war','geopolitical','asean',
+  'apec','trade deal','economic','budget','fiscal','monetary policy',
+  'bond','yield','dollar','sterling','yuan'
 ];
- 
-// ─── STATE ───────────────────────────────────────
-let active   = new Set(['USD','GBP','EUR','CNY','SGD','AED','JPY']);
-let hist     = {};
-let latest   = {};
-let prev     = {};
-let ticks    = [];   // live sim ticks [{ts,rates}]
-let chart    = null;
-let ri       = 3;    // range index
-let selMode  = false;
-let newsVis  = true;
-let news     = [];
-let starred  = new Set(JSON.parse(localStorage.getItem('myr-st')||'[]'));
-let rSec     = 60;
- 
-// ─── DATA ─────────────────────────────────────────
-async function fetchDay(ds) {
-  const lat = ds==='latest';
-  const us = lat
-    ? ['https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/myr.json',
-       'https://latest.currency-api.pages.dev/v1/currencies/myr.json']
-    : [`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${ds}/v1/currencies/myr.json`,
-       `https://historical.currency-api.pages.dev/v1/${ds}/currencies/myr.json`];
+
+const RSS_SOURCES = [
+  { url:'https://feeds.reuters.com/reuters/businessNews', name:'Reuters' },
+  { url:'https://www.freemalaysiatoday.com/feed/', name:'FMT' },
+  { url:'https://themalaysianreserve.com/feed/', name:'TMR' },
+];
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let activeSet = new Set(['USD','GBP','EUR','CNY','SGD','AED','JPY']);
+let ratesHistory = {};
+let latestRates = {};
+let prevRates = {};
+let chart = null;
+let currentRangeIdx = 3;
+let currentLabels = [];
+let refreshCountdown = 60;
+let refreshInterval;
+let newsItems = [];
+let newsFilter = 'all';
+let starredNews = JSON.parse(localStorage.getItem('myr-starred') || '{}');
+let newsMarkers = []; // { dateLabel, items[], px? }
+let mode = 'zoom';
+
+// Measure state
+let measureDragging = false;
+let measureX0 = 0, measureX1 = 0;
+
+// ════════════════════════════════════════
+// LOADING PROGRESS
+// ════════════════════════════════════════
+function setProgress(pct, txt) {
+  document.getElementById('load-prog').style.width = pct + '%';
+  document.getElementById('load-txt').textContent = txt;
+}
+
+// ════════════════════════════════════════
+// DATA FETCHING
+// ════════════════════════════════════════
+async function fetchRatesForDate(dateStr) {
+  const isLatest = dateStr === 'latest';
+  const cdnUrl = isLatest
+    ? `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/myr.json`
+    : `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${dateStr}/v1/currencies/myr.json`;
+  const fallUrl = isLatest
+    ? `https://latest.currency-api.pages.dev/v1/currencies/myr.json`
+    : `https://historical.currency-api.pages.dev/v1/${dateStr}/currencies/myr.json`;
+
   let data;
-  for (const u of us) { try{const r=await fetch(u);if(r.ok){data=await r.json();break;}}catch{} }
-  if (!data?.myr) return null;
-  const res={};
-  for (const c of CUR) { const k=c.code.toLowerCase(); if(data.myr[k]) res[c.code]=1/data.myr[k]; }
-  return res;
-}
- 
-function dayRange(n) {
-  const arr=[];
-  const now=new Date();
-  for (let i=n;i>=1;i--) {
-    const d=new Date(now); d.setDate(d.getDate()-i);
-    arr.push(d.toISOString().split('T')[0]);
+  try { data = await (await fetch(cdnUrl)).json(); }
+  catch { try { data = await (await fetch(fallUrl)).json(); } catch { return null; } }
+
+  const raw = data?.myr;
+  if (!raw) return null;
+  const result = {};
+  for (const c of CURRENCIES) {
+    const key = c.code.toLowerCase();
+    if (raw[key]) result[c.code] = 1 / raw[key];
   }
-  return arr;
+  return result;
 }
- 
-async function loadHist(n) {
-  const dates=dayRange(n);
-  const miss=dates.filter(d=>!hist[d]);
-  for (let i=0;i<miss.length;i+=6) {
-    const b=miss.slice(i,i+6);
-    const res=await Promise.all(b.map(d=>fetchDay(d)));
-    b.forEach((d,j)=>{ if(res[j]) hist[d]=res[j]; });
+
+async function fetchLiveRate(fromCurrency) {
+  const symbol = encodeURIComponent(`${fromCurrency}MYR=X`);
+  const url = `https://corsproxy.io/?https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;
+  } catch { return null; }
+}
+
+function getDateRange(days) {
+  const dates = [];
+  const now = new Date();
+  for (let i = days; i >= 1; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
   }
   return dates;
 }
- 
-async function fetchLatest() {
-  const data=await fetchDay('latest');
-  if (!data) return;
-  prev={...latest}; latest=data;
-  hist[new Date().toISOString().split('T')[0]]=data;
-  const tk={ts:Date.now(),rates:{...data}};
-  if (!ticks.length) seedTicks(tk); else ticks.push(tk);
-  if (ticks.length>600) ticks=ticks.slice(-600);
-}
- 
-function seedTicks(base) {
-  const N=150, IV=5000, seeds=[];
-  for (let i=N;i>=1;i--) {
-    const ts=base.ts-i*IV, rates={};
-    for (const c of CUR) {
-      const b=base.rates[c.code]||1;
-      rates[c.code]=b+b*(Math.random()-.499)*0.0006*(i/N);
-    }
-    seeds.push({ts,rates});
+
+async function loadHistory(days) {
+  const dates = getDateRange(days);
+  const needed = dates.filter(d => !ratesHistory[d]);
+  for (let i = 0; i < needed.length; i += 6) {
+    const batch = needed.slice(i, i + 6);
+    const results = await Promise.all(batch.map(d => fetchRatesForDate(d)));
+    batch.forEach((date, idx) => { if (results[idx]) ratesHistory[date] = results[idx]; });
   }
-  ticks=[...seeds,base];
+  return dates;
 }
- 
-function simTick() {
-  if (!ticks.length) return;
-  const last=ticks[ticks.length-1], rates={};
-  for (const c of CUR) {
-    const v=last.rates[c.code]||1;
-    rates[c.code]=v+v*(Math.random()-.499)*0.00016;
+
+async function loadLatest() {
+  const results = await Promise.all(
+    CURRENCIES.map(c => fetchLiveRate(c.code).then(rate => ({ code: c.code, rate })))
+  );
+
+  prevRates = { ...latestRates };
+  for (const { code, rate } of results) {
+    if (rate != null) latestRates[code] = rate;
   }
-  ticks.push({ts:Date.now(),rates});
-  if (ticks.length>600) ticks.shift();
-  latest={...rates};
+
+  const today = new Date().toISOString().split('T')[0];
+  ratesHistory[today] = { ...latestRates };
 }
- 
-// ─── NEWS ─────────────────────────────────────────
-function relevant(t,d){ return MYR_KW.some(k=>(t+' '+d).toLowerCase().includes(k)); }
-function sentiment(t,d){
-  const tx=(t+' '+d).toLowerCase();
-  const p=POS_W.filter(w=>tx.includes(w)).length;
-  const n=NEG_W.filter(w=>tx.includes(w)).length;
-  return p>n?'pos':n>p?'neg':'neu';
+
+// ════════════════════════════════════════
+// NEWS FETCHING
+// ════════════════════════════════════════
+function scoreRelevance(text) {
+  const t = text.toLowerCase();
+  let score = 0;
+  for (const kw of MYR_KEYWORDS) if (t.includes(kw)) score++;
+  return score;
 }
-function matchKW(t,d){ return MYR_KW.filter(k=>(t+' '+d).toLowerCase().includes(k)); }
- 
-async function fetchNews() {
-  const res=[];
-  for (const rss of RSS) {
-    try {
-      const r=await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}&count=25`);
-      const data=await r.json();
-      if (!data.items) continue;
-      for (const item of data.items) {
-        const t=item.title||'', d=(item.description||'').replace(/<[^>]*>/g,'').slice(0,350);
-        if (!relevant(t,d)) continue;
-        const pub=new Date(item.pubDate||item.published);
-        if (isNaN(pub)) continue;
-        res.push({id:item.guid||item.link,title:t,desc:d,url:item.link,
-          date:pub.toISOString().split('T')[0],ts:pub.getTime(),
-          sentiment:sentiment(t,d),kw:matchKW(t,d)});
+
+function stripHtml(html) {
+  return (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+}
+
+async function fetchNewsFromSource(src) {
+  try {
+    const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}&count=30`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const d = await r.json();
+    if (d.status !== 'ok' || !d.items) return [];
+    return d.items.map(item => {
+      const titleText = stripHtml(item.title);
+      const excerpt = stripHtml(item.description || item.content || '').slice(0, 250);
+      const score = scoreRelevance(titleText + ' ' + excerpt);
+      const rawDate = item.pubDate || '';
+      let dateStr = '';
+      try { dateStr = new Date(rawDate).toISOString().split('T')[0]; } catch {}
+      return { title: titleText, url: item.link || '#', excerpt, date: dateStr, source: src.name, score };
+    }).filter(i => i.score > 0 && i.date);
+  } catch { return []; }
+}
+
+async function fetchAllNews() {
+  const results = await Promise.all(RSS_SOURCES.map(fetchNewsFromSource));
+  const flat = results.flat();
+  // Deduplicate by URL
+  const seen = new Set();
+  const deduped = flat.filter(i => { if (seen.has(i.url)) return false; seen.add(i.url); return true; });
+  // Sort by date desc, then score desc
+  deduped.sort((a, b) => b.date.localeCompare(a.date) || b.score - a.score);
+  return deduped;
+}
+
+function groupNewsByDate(items) {
+  const map = {};
+  for (const item of items) {
+    if (!map[item.date]) map[item.date] = [];
+    map[item.date].push(item);
+  }
+  return Object.entries(map).map(([date, items]) => ({ date, dateLabel: date.slice(5), items }));
+}
+
+// ════════════════════════════════════════
+// NEWS MARKER PLUGIN
+// ════════════════════════════════════════
+const newsMarkerPlugin = {
+  id: 'newsMarkers',
+  afterDraw(ch) {
+    if (!newsMarkers.length) return;
+    const { ctx, chartArea, scales } = ch;
+    const xScale = scales.x;
+    const ticks = xScale._ticks || xScale.ticks || [];
+
+    newsMarkers.forEach(marker => {
+      // Find tick index matching this date label
+      let tickIdx = -1;
+      for (let i = 0; i < currentLabels.length; i++) {
+        if (currentLabels[i] === marker.dateLabel) { tickIdx = i; break; }
       }
-    } catch {}
+      if (tickIdx < 0) return;
+
+      let px;
+      try { px = xScale.getPixelForTick(tickIdx); } catch { return; }
+      if (isNaN(px) || px < chartArea.left - 5 || px > chartArea.right + 5) return;
+
+      marker.px = px;
+      const maxScore = Math.max(...marker.items.map(i => i.score));
+      const isHigh = maxScore >= 3;
+      const hasStarred = marker.items.some(i => starredNews[i.url]);
+      const col = hasStarred ? '#00ff99' : isHigh ? '#ffb300' : '#4a6580';
+      const glowCol = hasStarred ? 'rgba(0,255,153,0.5)' : isHigh ? 'rgba(255,179,0,0.5)' : 'rgba(74,101,128,0.3)';
+
+      ctx.save();
+      ctx.setLineDash([3, 5]);
+      ctx.strokeStyle = col.replace(')', ',0.3)').replace('rgb(', 'rgba(') || 'rgba(74,101,128,0.3)';
+      ctx.strokeStyle = glowCol;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, chartArea.top + 24);
+      ctx.lineTo(px, chartArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(px, chartArea.top + 16, 5, 0, Math.PI * 2);
+      ctx.fill();
+      if (marker.items.length > 1) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#060a0e';
+        ctx.font = '8px Share Tech Mono';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(marker.items.length, px, chartArea.top + 16);
+      }
+      ctx.restore();
+    });
   }
-  const seen=new Set();
-  news=res.filter(n=>{ if(seen.has(n.id)) return false; seen.add(n.id); return true; });
-  renderNews();
-}
- 
-function renderNews() {
-  const ov=document.getElementById('newsOv');
-  ov.innerHTML='';
-  if (!chart||!newsVis||ri===0) return;
-  const ca=chart.chartArea; if (!ca) return;
-  const cutoff=Date.now()-RANGES[ri].d*86400000;
-  for (const item of news) {
-    if (item.ts<cutoff) continue;
-    let px; try{px=chart.scales.x.getPixelForValue(item.ts);}catch{continue;}
-    if (px<ca.left||px>ca.right) continue;
-    const sh=Math.floor(Math.random()*18)+12;
-    const clr=item.sentiment==='pos'?'var(--green)':item.sentiment==='neg'?'var(--red)':'var(--amber)';
-    const el=document.createElement('div');
-    el.className='nm';
-    el.style.cssText=`left:${px}px;top:${ca.top+4}px;`;
-    el.innerHTML=`<div class="nmf ${item.sentiment}" style="color:${clr}">${starred.has(item.id)?'★':'◆'}</div><div class="nm-st" style="height:${sh}px;background:${clr}"></div>`;
-    el.title=item.title;
-    el.addEventListener('click',()=>openNews(item));
-    ov.appendChild(el);
-  }
-}
- 
-function openNews(item) {
-  const isStar=starred.has(item.id);
-  const sl=item.sentiment==='pos'?'▲ BULLISH MYR':item.sentiment==='neg'?'▼ BEARISH MYR':'◆ NEUTRAL';
-  document.getElementById('npBody').innerHTML=`
-    <div class="np-dt">${item.date}</div>
-    <div class="np-sent ${item.sentiment}">${sl}</div>
-    <div class="np-ttl">${item.title}</div>
-    <div class="np-desc">${item.desc}</div>
-    <div class="np-tags">${item.kw.map(k=>`<span class="np-tag hit">${k}</span>`).join('')}</div>
-    <div class="np-acts">
-      <button class="np-btn ${isStar?'starred':''}" id="npStar" onclick="toggleStar('${item.id}',this)">${isStar?'★ STARRED':'☆ STAR'}</button>
-      <button class="np-btn go" onclick="window.open('${item.url}','_blank')">↗ READ</button>
-    </div>`;
-  document.getElementById('newsPanel').classList.add('open');
-}
- 
-function closeNews(){ document.getElementById('newsPanel').classList.remove('open'); }
- 
-function toggleStar(id,btn){
-  if (starred.has(id)){starred.delete(id);btn.textContent='☆ STAR';btn.classList.remove('starred');}
-  else{starred.add(id);btn.textContent='★ STARRED';btn.classList.add('starred');}
-  localStorage.setItem('myr-st',JSON.stringify([...starred]));
-  renderNews();
-}
- 
-// ─── CHART ────────────────────────────────────────
-const newsPlugin={
-  id:'newsPlugin',
-  afterRender(){ renderNews(); }
 };
- 
-function timeUnit(d){
-  if(d===0) return 'minute';
-  if(d<=3)  return 'hour';
-  if(d<=90) return 'day';
-  if(d<=365)return 'week';
-  return 'month';
-}
-function timeFmt(d){
-  if(d===0) return {minute:'HH:mm',hour:'HH:mm'};
-  if(d<=3)  return {hour:'MM/dd HH:mm'};
-  if(d<=90) return {day:'MM/dd'};
-  if(d<=365)return {week:'MM/dd'};
-  return {month:"MMM ''yy"};
-}
- 
-function makeSets(labels,live){
-  return CUR.filter(c=>active.has(c.code)).map(c=>({
-    label:c.code,
-    data:live
-      ? ticks.map(t=>({x:t.ts,y:t.rates[c.code]??null}))
-      : labels.map(d=>{ const r=hist[d]; return r?{x:new Date(d).getTime(),y:r[c.code]??null}:null; }).filter(Boolean),
-    borderColor:c.col,
-    backgroundColor:c.col+'10',
-    borderWidth:1.6,
-    pointRadius:live?0:2,
-    pointHoverRadius:5,
-    pointBackgroundColor:c.col,
-    tension:0.3,
-    fill:false,
-  }));
-}
- 
-async function buildChart(){
-  const rng=RANGES[ri], live=rng.d===0;
-  let labels=[];
-  if (!live) labels=await loadHist(rng.d);
-  if (chart){chart.destroy();chart=null;}
-  const ctx=document.getElementById('cc').getContext('2d');
-  chart=new Chart(ctx,{
-    type:'line',
-    data:{datasets:makeSets(labels,live)},
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      animation:{duration:200},
-      parsing:false,
-      plugins:{
-        legend:{display:true,position:'top',labels:{color:'#4a6580',font:{family:"'Share Tech Mono',monospace",size:10},boxWidth:10,padding:14}},
-        tooltip:{
-          mode:'index',intersect:false,
-          backgroundColor:'#0d1520',borderColor:'#1a2d45',borderWidth:1,
-          titleColor:'#00e5ff',bodyColor:'#c8dae8',
-          titleFont:{family:"'Share Tech Mono',monospace",size:10},
-          bodyFont:{family:"'Share Tech Mono',monospace",size:10},
-          padding:10,
-          callbacks:{label:c=>` ${c.dataset.label}: ${(c.parsed.y||0).toFixed(6)} MYR`}
-        },
-        zoom:{
-          zoom:{wheel:{enabled:true,speed:0.08},pinch:{enabled:true},mode:'x'},
-          pan:{enabled:true,mode:'x'},
-          limits:{x:{min:'original',max:'original'}},
-        },
-      },
-      scales:{
-        x:{type:'time',time:{unit:timeUnit(rng.d),displayFormats:timeFmt(rng.d)},
-          grid:{color:'#0c1820'},ticks:{color:'#4a6580',font:{family:"'Share Tech Mono',monospace",size:9},maxTicksLimit:12},
-          border:{color:'#1a2d45'}},
-        y:{grid:{color:'#0c1820'},
-          ticks:{color:'#4a6580',font:{family:"'Share Tech Mono',monospace",size:9},callback:v=>v.toFixed(4)},
-          border:{color:'#1a2d45'}},
-      },
-    },
-    plugins:[newsPlugin],
+Chart.register(newsMarkerPlugin);
+
+// ════════════════════════════════════════
+// CHART
+// ════════════════════════════════════════
+function buildDatasets() {
+  return CURRENCIES.filter(c => activeSet.has(c.code)).map(c => {
+    const data = currentLabels.map(label => {
+      const fullDate = new Date().getFullYear() + '-' + label;
+      // Search through history
+      for (const [date, rates] of Object.entries(ratesHistory)) {
+        if (date.slice(5) === label && rates[c.code]) return rates[c.code];
+      }
+      return null;
+    });
+    return {
+      label: c.code, data,
+      borderColor: c.color,
+      backgroundColor: c.color + '12',
+      borderWidth: 1.8,
+      pointRadius: 0,
+      pointHoverRadius: 6,
+      pointBackgroundColor: c.color,
+      pointBorderColor: 'transparent',
+      tension: 0.3,
+      fill: false,
+      spanGaps: true,
+    };
   });
 }
- 
-function pushLiveTick(rates){
-  if (!chart||ri!==0) return;
-  const ts=Date.now();
-  chart.data.datasets.forEach(ds=>{
-    ds.data.push({x:ts,y:rates[ds.label]??null});
-    if(ds.data.length>600) ds.data.shift();
+
+function initChart() {
+  const ctx = document.getElementById('main-chart').getContext('2d');
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: currentLabels, datasets: buildDatasets() },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: '#3a5570',
+            font: { family: "'Share Tech Mono', monospace", size: 10 },
+            boxWidth: 10,
+            padding: 12,
+          }
+        },
+        tooltip: {
+          backgroundColor: '#0b1520',
+          borderColor: '#162840',
+          borderWidth: 1,
+          titleColor: '#00e5ff',
+          bodyColor: '#bdd4e8',
+          titleFont: { family: "'Share Tech Mono', monospace", size: 10 },
+          bodyFont: { family: "'Share Tech Mono', monospace", size: 10 },
+          padding: 10,
+          callbacks: {
+            title: items => '📅 ' + items[0].label,
+            label: ctx => {
+              const v = ctx.parsed.y;
+              return v != null ? `  ${ctx.dataset.label}: ${v.toFixed(6)} MYR` : `  ${ctx.dataset.label}: N/A`;
+            }
+          }
+        },
+        zoom: {
+          zoom: {
+            wheel: { enabled: true, speed: 0.08 },
+            pinch: { enabled: true },
+            mode: 'x',
+          },
+          pan: {
+            enabled: true,
+            mode: 'x',
+          },
+          limits: {
+            x: { min: 'original', max: 'original', minRange: 2 }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#0d1a26', lineWidth: 1 },
+          ticks: {
+            color: '#3a5570',
+            font: { family: "'Share Tech Mono', monospace", size: 9 },
+            maxTicksLimit: 12,
+            maxRotation: 0,
+          },
+          border: { color: '#162840' }
+        },
+        y: {
+          grid: { color: '#0d1a26', lineWidth: 1 },
+          ticks: {
+            color: '#3a5570',
+            font: { family: "'Share Tech Mono', monospace", size: 9 },
+            callback: v => v.toFixed(4) + ' RM'
+          },
+          border: { color: '#162840' }
+        }
+      }
+    }
   });
+}
+
+function refreshChartData() {
+  if (!chart) return;
+  chart.data.labels = currentLabels;
+  chart.data.datasets = buildDatasets();
   chart.update('none');
 }
- 
-// ─── SELECTION ────────────────────────────────────
-let dragging=false, dx0=0, dx1=0;
-const cont    = document.getElementById('chartCont');
-const selOv   = document.getElementById('selOv');
-const selBox  = document.getElementById('selBox');
-const selLn1  = document.getElementById('selLn1');
-const selLn2  = document.getElementById('selLn2');
-const selSt   = document.getElementById('selStats');
- 
-selOv.addEventListener('mousedown',e=>{ if(!selMode||!chart) return; dragging=true; dx0=dx1=e.offsetX; selSt.style.display='none'; paintSel(); });
-selOv.addEventListener('mousemove',e=>{ if(!dragging||!selMode) return; dx1=e.offsetX; paintSel(); });
-selOv.addEventListener('mouseup',  e=>{ if(!dragging||!selMode) return; dragging=false; dx1=e.offsetX; paintSel(); calcStats(); });
-selOv.addEventListener('mouseleave',()=>{ if(dragging&&selMode){dragging=false;calcStats();} });
- 
-function paintSel(){
-  const x0=Math.min(dx0,dx1), x1=Math.max(dx0,dx1);
-  const ca=chart?.chartArea; if(!ca) return;
-  if(x1-x0<3){selBox.style.display=selLn1.style.display=selLn2.style.display='none';return;}
-  const base=`position:absolute;top:${ca.top}px;height:${ca.bottom-ca.top}px;`;
-  selBox.style.cssText=base+`left:${x0}px;width:${x1-x0}px;display:block;background:rgba(255,179,0,.06);pointer-events:none;`;
-  selLn1.style.cssText=`position:absolute;top:${ca.top}px;left:${x0}px;height:${ca.bottom-ca.top}px;width:1px;background:var(--amber);opacity:.65;display:block;pointer-events:none;`;
-  selLn2.style.cssText=`position:absolute;top:${ca.top}px;left:${x1}px;height:${ca.bottom-ca.top}px;width:1px;background:var(--amber);opacity:.65;display:block;pointer-events:none;`;
+
+// ════════════════════════════════════════
+// MEASURE OVERLAY
+// ════════════════════════════════════════
+function syncOverlaySize() {
+  const overlay = document.getElementById('overlay-canvas');
+  const main = document.getElementById('main-chart');
+  overlay.width = main.width;
+  overlay.height = main.height;
+  overlay.style.width = main.style.width;
+  overlay.style.height = main.style.height;
 }
- 
-function calcStats(){
-  if(!chart) return;
-  const ca=chart.chartArea;
-  const x0=Math.min(dx0,dx1), x1=Math.max(dx0,dx1);
-  if(x1-x0<10) return;
-  const cx0=Math.max(x0,ca.left), cx1=Math.min(x1,ca.right);
-  let t0,t1; try{t0=chart.scales.x.getValueForPixel(cx0);t1=chart.scales.x.getValueForPixel(cx1);}catch{return;}
-  const diff=((t1-t0)/86400000).toFixed(2);
-  const fmt=t=>{const d=new Date(t);return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
-  let rows='';
-  for (const ds of chart.data.datasets){
-    const pts=ds.data; let p0=null,p1=null,m0=Infinity,m1=Infinity;
-    for(const pt of pts){if(!pt||pt.y==null)continue; const a=Math.abs(pt.x-t0);if(a<m0){m0=a;p0=pt;} const b=Math.abs(pt.x-t1);if(b<m1){m1=b;p1=pt;}}
-    if(!p0||!p1) continue;
-    const pct=(p1.y-p0.y)/p0.y*100;
-    const sgn=pct>=0?'+':'', cls=pct>=0?'up':'dn';
-    const c=CUR.find(c=>c.code===ds.label);
-    rows+=`<div class="ssr"><span class="ssr-c" style="color:${c?.col}">${ds.label}</span><span class="ssr-n">${p0.y.toFixed(4)}→${p1.y.toFixed(4)}</span><span class="ssr-p ${cls}">${sgn}${pct.toFixed(4)}%</span></div>`;
+
+function getChartIndexAtPx(xPx) {
+  if (!chart) return -1;
+  const area = chart.chartArea;
+  const totalWidth = area.right - area.left;
+  const n = currentLabels.length;
+  if (n < 2 || xPx < area.left || xPx > area.right) return -1;
+  // account for zoom/pan via the scale
+  const scale = chart.scales.x;
+  let minDist = Infinity, minIdx = 0;
+  for (let i = 0; i < n; i++) {
+    try {
+      const px = scale.getPixelForTick(i);
+      const d = Math.abs(px - xPx);
+      if (d < minDist) { minDist = d; minIdx = i; }
+    } catch {}
   }
-  document.getElementById('ssContent').innerHTML=`<div style="font-size:.5rem;color:var(--dim);margin-bottom:6px">${fmt(t0)} → ${fmt(t1)} (${diff}d)</div>${rows}`;
-  const pw=210; let left=x1+10; if(left+pw>cont.clientWidth) left=x0-pw-10;
-  selSt.style.cssText=`display:block;left:${Math.max(0,left)}px;top:${ca.top+10}px;`;
+  return minIdx;
 }
- 
-function clearSel(){
-  selBox.style.display=selLn1.style.display=selLn2.style.display=selSt.style.display='none';
-}
- 
-// ─── TOOLBAR ──────────────────────────────────────
-document.getElementById('btnSel').addEventListener('click',()=>{
-  selMode=!selMode;
-  const btn=document.getElementById('btnSel'), pill=document.getElementById('modePill');
-  btn.classList.toggle('sel-on',selMode);
-  pill.className='mode-pill '+(selMode?'sel':'pz');
-  pill.textContent=selMode?'SELECT MODE':'PAN · ZOOM';
-  selOv.classList.toggle('active',selMode);
-  if(!selMode) clearSel();
-  if(chart){
-    chart.options.plugins.zoom.zoom.wheel.enabled=!selMode;
-    chart.options.plugins.zoom.pan.enabled=!selMode;
-    chart.update('none');
-  }
-});
- 
-document.getElementById('btnNews').addEventListener('click',()=>{
-  newsVis=!newsVis;
-  document.getElementById('btnNews').classList.toggle('on',newsVis);
-  renderNews();
-});
- 
-document.getElementById('btnZI').addEventListener('click',()=>{if(chart)chart.zoom(1.35);});
-document.getElementById('btnZO').addEventListener('click',()=>{if(chart)chart.zoom(0.74);});
-document.getElementById('btnRst').addEventListener('click',()=>{if(chart)chart.resetZoom();clearSel();});
- 
-// ─── RANGE BAR ────────────────────────────────────
-function buildRangebar(){
-  const row=document.getElementById('rpRow'); row.innerHTML='';
-  RANGES.forEach((r,i)=>{
-    const b=document.createElement('button');
-    b.className='rp-btn'+(i===ri?' on':'');
-    b.textContent=r.l;
-    b.addEventListener('click',()=>setRange(i));
-    row.appendChild(b);
+
+function drawMeasure(x0, x1) {
+  const overlay = document.getElementById('overlay-canvas');
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  if (!chart || !measureDragging) return;
+
+  const area = chart.chartArea;
+  const lx = Math.min(x0, x1), rx = Math.max(x0, x1);
+  const cl = Math.max(lx, area.left), cr = Math.min(rx, area.right);
+  if (cr <= cl) return;
+
+  // Selection rect
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,229,255,0.06)';
+  ctx.fillRect(cl, area.top, cr - cl, area.bottom - area.top);
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(0,229,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cl, area.top, cr - cl, area.bottom - area.top);
+  // vertical handles
+  ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(0,229,255,0.8)';
+  ctx.lineWidth = 1.5;
+  [[cl, area.top, cl, area.bottom], [cr, area.top, cr, area.bottom]].forEach(([ax, ay, bx, by]) => {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
   });
-  document.getElementById('rdial').value=ri;
+  ctx.restore();
+
+  // Compute stats
+  const idxA = getChartIndexAtPx(cl);
+  const idxB = getChartIndexAtPx(cr);
+  if (idxA < 0 || idxB < 0 || idxA === idxB) return;
+
+  const dateA = currentLabels[Math.min(idxA, idxB)];
+  const dateB = currentLabels[Math.max(idxA, idxB)];
+
+  const statsDiv = document.getElementById('measure-stats');
+  const activeCurrencies = CURRENCIES.filter(c => activeSet.has(c.code));
+  let html = `<div class="ms-head">RANGE ANALYSIS</div>`;
+  html += `<div class="ms-period">${dateA} → ${dateB} (${Math.abs(idxB - idxA)} days)</div>`;
+
+  for (const c of activeCurrencies) {
+    const getRate = label => {
+      for (const [d, r] of Object.entries(ratesHistory)) {
+        if (d.slice(5) === label && r[c.code]) return r[c.code];
+      }
+      return null;
+    };
+    const rA = getRate(dateA), rB = getRate(dateB);
+    if (!rA || !rB) continue;
+    const chg = ((rB - rA) / rA) * 100;
+    const absChg = rB - rA;
+    const cls = chg >= 0 ? 'up' : 'dn';
+    const arrow = chg >= 0 ? '▲' : '▼';
+    html += `<div class="ms-row">
+      <span class="ms-code" style="color:${c.color}">${c.code}</span>
+      <span class="ms-val ${cls}">${arrow} ${Math.abs(chg).toFixed(4)}% (${absChg >= 0 ? '+' : ''}${absChg.toFixed(6)})</span>
+    </div>`;
+  }
+  statsDiv.innerHTML = html;
+  statsDiv.style.display = 'block';
 }
- 
-function setRange(i){
-  ri=i;
-  document.querySelectorAll('.rp-btn').forEach((b,j)=>b.classList.toggle('on',j===i));
-  document.getElementById('rdial').value=i;
-  clearSel();
-  buildChart();
+
+function clearMeasure() {
+  const overlay = document.getElementById('overlay-canvas');
+  overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+  document.getElementById('measure-stats').style.display = 'none';
 }
- 
-document.getElementById('rdial').addEventListener('input',e=>setRange(parseInt(e.target.value)));
- 
-// ─── SIDEBAR ──────────────────────────────────────
-function buildSidebar(){
-  const list=document.getElementById('cList'); list.innerHTML='';
-  for (const c of CUR){
-    const on=active.has(c.code), r=latest[c.code], p=prev[c.code];
-    const chg=r&&p?(r-p)/p*100:0;
-    const d=document.createElement('div');
-    d.className='c-card'+(on?' on':'');
-    d.style.setProperty('--cc',c.col);
-    d.innerHTML=`<div class="c-chk">${on?'✓':''}</div><div class="c-info"><div class="c-code">${c.flag} ${c.code}</div><div class="c-name">${c.name}</div></div><div class="c-data"><div class="c-rate">${r?r.toFixed(6):'———'}</div><div class="c-chg ${chg>=0?'up':'dn'}">${r&&p?(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(4)+'%':'—'}</div></div>`;
-    d.addEventListener('click',()=>{
-      if(active.has(c.code)) active.delete(c.code); else active.add(c.code);
-      buildSidebar(); buildChart();
+
+// Canvas interaction
+function setupCanvasEvents() {
+  const mainCanvas = document.getElementById('main-chart');
+
+  mainCanvas.addEventListener('mousedown', e => {
+    if (mode !== 'measure') return;
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    measureX0 = (e.clientX - rect.left) * scaleX;
+    measureDragging = true;
+    mainCanvas.style.cursor = 'crosshair';
+  });
+
+  mainCanvas.addEventListener('mousemove', e => {
+    if (mode !== 'measure' || !measureDragging) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    measureX1 = (e.clientX - rect.left) * scaleX;
+    drawMeasure(measureX0, measureX1);
+  });
+
+  mainCanvas.addEventListener('mouseup', e => {
+    if (mode !== 'measure') return;
+    measureDragging = false;
+    mainCanvas.style.cursor = 'default';
+  });
+
+  // News marker click
+  mainCanvas.addEventListener('click', e => {
+    if (mode !== 'zoom') return;
+    if (!chart) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    const scaleY = mainCanvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const area = chart.chartArea;
+
+    for (const marker of newsMarkers) {
+      if (marker.px == null) continue;
+      const dx = mx - marker.px, dy = my - (area.top + 16);
+      if (Math.sqrt(dx*dx + dy*dy) < 10) {
+        highlightNewsItems(marker.items);
+        break;
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════
+// MODE SWITCHING
+// ════════════════════════════════════════
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-zoom').classList.toggle('active', m === 'zoom');
+  document.getElementById('btn-measure').classList.toggle('active', m === 'measure');
+  if (!chart) return;
+  const zoomEnabled = m === 'zoom';
+  chart.options.plugins.zoom.zoom.wheel.enabled = zoomEnabled;
+  chart.options.plugins.zoom.zoom.pinch.enabled = zoomEnabled;
+  chart.options.plugins.zoom.pan.enabled = zoomEnabled;
+  chart.update('none');
+  if (m === 'zoom') clearMeasure();
+  document.getElementById('main-chart').style.cursor = m === 'measure' ? 'crosshair' : 'grab';
+}
+
+document.getElementById('btn-zoom').addEventListener('click', () => setMode('zoom'));
+document.getElementById('btn-measure').addEventListener('click', () => setMode('measure'));
+document.getElementById('reset-zoom-btn').addEventListener('click', () => {
+  if (chart) { chart.resetZoom(); clearMeasure(); }
+});
+
+// ════════════════════════════════════════
+// TIME RANGE SLIDER
+// ════════════════════════════════════════
+function buildSliderLabels() {
+  const container = document.getElementById('slider-labels');
+  container.innerHTML = '';
+  RANGE_OPTIONS.forEach((opt, i) => {
+    const span = document.createElement('span');
+    span.className = 'slider-label' + (i === currentRangeIdx ? ' active' : '');
+    span.textContent = opt.label;
+    span.addEventListener('click', () => setRange(i));
+    container.appendChild(span);
+  });
+}
+
+async function setRange(idx) {
+  currentRangeIdx = idx;
+  document.getElementById('time-slider').value = idx;
+  buildSliderLabels();
+  const days = RANGE_OPTIONS[idx].days;
+  setProgress(40, 'LOADING HISTORICAL DATA...');
+  const dates = await loadHistory(days);
+  currentLabels = dates.map(d => d.slice(5));
+  if (chart) { chart.resetZoom(); refreshChartData(); }
+  else initChart();
+  updateNewsMarkersOnChart();
+}
+
+document.getElementById('time-slider').addEventListener('input', e => {
+  setRange(parseInt(e.target.value));
+});
+
+// ════════════════════════════════════════
+// NEWS UI
+// ════════════════════════════════════════
+function getRelevanceLabel(score) {
+  if (score >= 4) return '<span class="relevance-badge rel-high">HIGH</span>';
+  if (score >= 2) return '<span class="relevance-badge rel-med">MED</span>';
+  return '';
+}
+
+function renderNewsList() {
+  const list = document.getElementById('news-list');
+  let filtered = newsItems;
+  if (newsFilter === 'starred') filtered = newsItems.filter(i => starredNews[i.url]);
+  if (newsFilter === 'high') filtered = newsItems.filter(i => i.score >= 4);
+  document.getElementById('news-count').textContent = filtered.length + ' items';
+  if (!filtered.length) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--dim);font-size:0.6rem;letter-spacing:2px;">NO ITEMS TO DISPLAY</div>`;
+    return;
+  }
+  list.innerHTML = filtered.slice(0, 60).map(item => {
+    const starred = starredNews[item.url] ? ' starred' : '';
+    return `<div class="news-card${starred}" data-url="${item.url}">
+      ${getRelevanceLabel(item.score)}
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="nc-date">${item.date}</div>
+        <div class="nc-source">${item.source}</div>
+      </div>
+      <div class="nc-title">${item.title}</div>
+      <div class="nc-excerpt">${item.excerpt}</div>
+      <div class="nc-footer">
+        <a class="nc-link" href="${item.url}" target="_blank" rel="noopener">READ →</a>
+        <button class="star-btn${starred}" onclick="toggleStar('${item.url}',this);event.stopPropagation()">
+          ${starredNews[item.url] ? '★ STARRED' : '☆ STAR'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function highlightNewsItems(items) {
+  document.querySelectorAll('.news-card').forEach(el => el.classList.remove('highlighted'));
+  const urls = new Set(items.map(i => i.url));
+  document.querySelectorAll('.news-card').forEach(el => {
+    if (urls.has(el.dataset.url)) {
+      el.classList.add('highlighted');
+      el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+  });
+}
+
+function toggleStar(url, btn) {
+  starredNews[url] = !starredNews[url];
+  if (!starredNews[url]) delete starredNews[url];
+  localStorage.setItem('myr-starred', JSON.stringify(starredNews));
+  btn.textContent = starredNews[url] ? '★ STARRED' : '☆ STAR';
+  btn.classList.toggle('starred', !!starredNews[url]);
+  btn.closest('.news-card').classList.toggle('starred', !!starredNews[url]);
+  // Redraw markers to reflect star change
+  if (chart) chart.draw();
+}
+
+document.querySelectorAll('.nf-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nf-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    newsFilter = tab.dataset.filter;
+    renderNewsList();
+  });
+});
+
+function updateNewsMarkersOnChart() {
+  newsMarkers = groupNewsByDate(newsItems).filter(m => currentLabels.includes(m.dateLabel));
+  if (chart) chart.draw();
+}
+
+// ════════════════════════════════════════
+// SIDEBAR
+// ════════════════════════════════════════
+function buildSidebar() {
+  const list = document.getElementById('currency-list');
+  list.innerHTML = '';
+  for (const c of CURRENCIES) {
+    const on = activeSet.has(c.code);
+    const rate = latestRates[c.code];
+    const prev = prevRates[c.code];
+    const chg = rate && prev ? ((rate - prev) / prev * 100) : null;
+    const chgStr = chg != null ? (chg >= 0 ? `▲ ${chg.toFixed(4)}%` : `▼ ${Math.abs(chg).toFixed(4)}%`) : '—';
+    const chgCls = chg == null ? '' : chg >= 0 ? 'up' : 'dn';
+
+    const card = document.createElement('div');
+    card.className = 'c-card' + (on ? ' on' : '');
+    card.style.setProperty('--c', c.color);
+    card.innerHTML = `
+      <div class="c-toggle">${on ? '✓' : ''}</div>
+      <div class="c-info">
+        <div class="c-code">${c.flag} ${c.code}</div>
+        <div class="c-name">${c.name}</div>
+      </div>
+      <div class="c-right">
+        <div class="c-rate">${rate ? rate.toFixed(6) : '——'}</div>
+        <div class="c-chg ${chgCls}">${chgStr}</div>
+      </div>`;
+    card.addEventListener('click', () => {
+      if (activeSet.has(c.code)) activeSet.delete(c.code);
+      else activeSet.add(c.code);
+      buildSidebar();
+      refreshChartData();
     });
-    list.appendChild(d);
+    list.appendChild(card);
   }
 }
- 
-function buildTicker(){
-  const inner=document.getElementById('ticker');
-  const items=CUR.map(c=>{
-    const r=latest[c.code],p=prev[c.code],chg=r&&p?(r-p)/p*100:0;
-    return `<span class="tk-item"><span class="tk-code">${c.flag} ${c.code}/MYR</span><span style="color:var(--text)">${r?r.toFixed(6):'—'}</span><span class="tk-chg ${chg>=0?'up':'dn'}">${r&&p?(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(4)+'%':'—'}</span></span>`;
+
+// ════════════════════════════════════════
+// TICKER
+// ════════════════════════════════════════
+function buildTicker() {
+  const ticker = document.getElementById('ticker');
+  const items = CURRENCIES.map(c => {
+    const rate = latestRates[c.code];
+    const prev = prevRates[c.code];
+    const chg = rate && prev ? ((rate - prev) / prev * 100) : null;
+    const dir = chg == null ? '' : chg >= 0 ? 'up' : 'dn';
+    const arrow = chg == null ? '' : chg >= 0 ? '▲' : '▼';
+    return `<span class="ticker-item">
+      <span class="t-code">${c.flag} ${c.code}/MYR</span>
+      <span class="t-val">${rate ? rate.toFixed(6) : '—'}</span>
+      <span class="t-chg ${dir}">${chg != null ? arrow + Math.abs(chg).toFixed(4) + '%' : '—'}</span>
+    </span>`;
   }).join('');
-  inner.innerHTML=items+items;
+  ticker.innerHTML = items + items;
 }
- 
-function buildHeader(){
-  const hs=document.getElementById('hstats');
-  hs.innerHTML=['USD','EUR','SGD'].map(code=>{
-    const r=latest[code],p=prev[code],chg=r&&p?(r-p)/p*100:0;
-    return `<div class="hst"><div class="hst-v" style="color:${chg>=0?'var(--green)':'var(--red)'}">${r?r.toFixed(4):'—'}</div><div class="hst-l">${code}/MYR</div></div>`;
-  }).join('');
-}
- 
-// ─── CLOCK & LIVE ─────────────────────────────────
-function tick(){ document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-MY',{hour12:false})+' MYT'; }
- 
-function startLive(){
-  setInterval(()=>{
-    simTick();
-    pushLiveTick(latest);
-    buildTicker(); buildHeader();
-  },5000);
- 
-  setInterval(async()=>{
-    rSec--;
-    document.getElementById('cdown').textContent=`REFRESH IN ${rSec}s`;
-    if(rSec<=0){
-      rSec=60;
-      await fetchLatest();
-      buildSidebar(); buildTicker(); buildHeader();
-      if(ri!==0) await buildChart();
-      document.getElementById('sbUpd').textContent='UPDATED: '+new Date().toLocaleTimeString('en-MY',{hour12:false});
+
+// ════════════════════════════════════════
+// REFRESH COUNTDOWN
+// ════════════════════════════════════════
+function startRefreshCountdown() {
+  clearInterval(refreshInterval);
+  refreshCountdown = 60;
+  const fill = document.getElementById('refresh-bar-fill');
+  fill.style.width = '100%';
+
+  refreshInterval = setInterval(async () => {
+    refreshCountdown--;
+    const pct = (refreshCountdown / 60) * 100;
+    fill.style.width = pct + '%';
+    document.getElementById('refresh-label').textContent = refreshCountdown + 's';
+
+    if (refreshCountdown <= 0) {
+      await loadLatest();
+      buildSidebar();
+      buildTicker();
+      refreshChartData();
+      document.getElementById('last-updated').textContent =
+        'LAST UPDATE: ' + new Date().toLocaleTimeString('en-MY', { hour12:false }) + ' MYT';
+      refreshCountdown = 60;
+      fill.style.transition = 'none';
+      fill.style.width = '100%';
+      requestAnimationFrame(() => { fill.style.transition = 'width 1s linear'; });
     }
-  },1000);
+  }, 1000);
 }
- 
-window.addEventListener('resize',()=>renderNews());
- 
-// ─── INIT ─────────────────────────────────────────
-async function init(){
-  const msg=document.getElementById('ldMsg');
-  msg.textContent='FETCHING LIVE RATES...';
-  await fetchLatest();
-  msg.textContent='LOADING HISTORY...';
-  await loadHist(14);
-  msg.textContent='FETCHING NEWS...';
-  fetchNews();
-  msg.textContent='BUILDING TERMINAL...';
-  buildRangebar();
+
+// ════════════════════════════════════════
+// CLOCK
+// ════════════════════════════════════════
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-MY', { hour12:false }) + ' MYT';
+}, 1000);
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+async function init() {
+  setProgress(10, 'CONNECTING TO RATE API...');
+  await loadLatest();
+
+  setProgress(35, 'LOADING 30-DAY HISTORY...');
+  const dates = await loadHistory(RANGE_OPTIONS[3].days); // 1M
+  currentLabels = dates.map(d => d.slice(5));
+
+  setProgress(60, 'RENDERING CHART...');
   buildSidebar();
   buildTicker();
-  buildHeader();
-  await buildChart();
-  setInterval(tick,1000); tick();
-  startLive();
-  document.getElementById('sbUpd').textContent='UPDATED: '+new Date().toLocaleTimeString('en-MY',{hour12:false});
-  const ld=document.getElementById('loading');
-  ld.style.opacity='0';
-  setTimeout(()=>ld.style.display='none',500);
+  buildSliderLabels();
+  initChart();
+  setupCanvasEvents();
+
+  setProgress(75, 'FETCHING MARKET NEWS...');
+  try {
+    newsItems = await fetchAllNews();
+    updateNewsMarkersOnChart();
+    renderNewsList();
+  } catch (e) {
+    document.getElementById('news-list').innerHTML = `<div style="padding:20px;color:var(--dim);font-size:0.6rem;letter-spacing:2px;">NEWS UNAVAILABLE — RSS FEEDS OFFLINE</div>`;
+  }
+
+  setProgress(95, 'FINALIZING...');
+  document.getElementById('last-updated').textContent =
+    'LAST UPDATE: ' + new Date().toLocaleTimeString('en-MY', { hour12:false }) + ' MYT';
+
+  const loader = document.getElementById('loading');
+  loader.style.opacity = '0';
+  setTimeout(() => loader.style.display = 'none', 500);
+
+  setProgress(100, 'READY');
+  setMode('zoom');
+  startRefreshCountdown();
+
+  // Handle resize
+  new ResizeObserver(() => {
+    syncOverlaySize();
+    if (chart) chart.resize();
+  }).observe(document.getElementById('main-chart'));
 }
- 
+
 init();
 </script>
 </body>
 </html>
- 
