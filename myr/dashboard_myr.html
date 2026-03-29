@@ -415,7 +415,7 @@ input[type=range]#time-slider::-webkit-slider-thumb:active { transform:scale(1.3
 </div>
 
 <div class="statusbar">
-  <span><span class="sb-dot"></span>DATA: FAWAZAHMED0 CURRENCY API (FREE · NO KEY REQUIRED)</span>
+  <span><span class="sb-dot"></span>LIVE: YAHOO FINANCE (1M DELAY) · HISTORY: FAWAZAHMED0</span>
   <span id="last-updated">LAST UPDATE: --</span>
   <span>BASE: MYR (MALAYSIAN RINGGIT) · 6dp PRECISION</span>
 </div>
@@ -440,6 +440,7 @@ const CURRENCIES = [
 ];
 
 const RANGE_OPTIONS = [
+  { label:'1D', days:1},  
   { label:'3D',  days:3   },
   { label:'7D',  days:7   },
   { label:'14D', days:14  },
@@ -451,19 +452,42 @@ const RANGE_OPTIONS = [
 ];
 
 const MYR_KEYWORDS = [
-  'ringgit','myr','malaysia','bank negara','malaysian','forex','currency',
-  'exchange rate','kuala lumpur','petronas','tariff','interest rate',
-  'inflation','recession','trade','export','gdp','investment','imf',
-  'world bank','federal reserve','fed rate','oil','crude','palm oil',
-  'semiconductor','intel','sanction','war','geopolitical','asean',
-  'apec','trade deal','economic','budget','fiscal','monetary policy',
-  'bond','yield','dollar','sterling','yuan'
+  // Malaysia-specific
+  'ringgit','myr','malaysia','malaysian','bank negara','bnm','klci','bursa',
+  'petronas','felda','khazanah','tabung haji','epf','kwsp','maybank','cimb',
+  'public bank','tenaga','tnb','ron95','fuel subsidy','budget 2025','budget 2026',
+  'kuala lumpur','putrajaya','iskandar','johor','penang','sarawak',
+  // Macro / forex
+  'forex','exchange rate','currency','devaluation','depreciation','appreciation',
+  'inflation','recession','interest rate','rate hike','rate cut','monetary policy',
+  'fiscal','gdp','trade deficit','current account','capital outflow','capital inflow',
+  'fdi','foreign direct investment','imf','world bank','brics','asean','apec',
+  // Commodities Malaysia exports
+  'palm oil','crude oil','lng','natural gas','rubber','timber','petrochemical',
+  'refinery','opec','oil price','brent','wti',
+  // Tech / semiconductors
+  'semiconductor','chip','wafer','fab','foundry','tsmc','intel','nvidia','amd',
+  'qualcomm','broadcom','arm','micron','samsung','sk hynix',
+  'datacenter','data center','hyperscaler','cloud','ai','artificial intelligence',
+  'photonics','lumentum','coherent','ii-vi','silicon photonics','optical compute',
+  'electronics','manufacturing','supply chain','reshoring','nearshoring',
+  // Geopolitics / risk
+  'tariff','sanction','trade war','us-china','war','conflict','geopolitical',
+  'dollar','fed','federal reserve','ecb','boj','pboc','yuan','sterling',
+  'bond','yield','treasury','rating','downgrade','corruption','scandal'
 ];
 
 const RSS_SOURCES = [
-  { url:'https://feeds.reuters.com/reuters/businessNews', name:'Reuters' },
-  { url:'https://www.freemalaysiatoday.com/feed/', name:'FMT' },
-  { url:'https://themalaysianreserve.com/feed/', name:'TMR' },
+  { url:'https://feeds.reuters.com/reuters/businessNews',           name:'Reuters' },
+  { url:'https://feeds.reuters.com/reuters/technologyNews',         name:'Reuters Tech' },
+  { url:'https://www.freemalaysiatoday.com/feed/',                  name:'FMT' },
+  { url:'https://themalaysianreserve.com/feed/',                    name:'TMR' },
+  { url:'https://www.thestar.com.my/rss/business',                  name:'The Star' },
+  { url:'https://www.malaymail.com/feed',                           name:'Malay Mail' },
+  { url:'https://api.rss2json.com/v1/api.json?rss_url=https://www.bernama.com/en/rss/bernama_en.xml', name:'Bernama' },
+  { url:'https://finance.yahoo.com/rss/topstories',                 name:'Yahoo Finance' },
+  { url:'https://www.cnbc.com/id/10000664/device/rss/rss.html',     name:'CNBC' },
+  { url:'https://www.businesstimes.com.sg/rss/international',       name:'Business Times SG' },
 ];
 
 // ════════════════════════════════════════
@@ -483,6 +507,8 @@ let newsFilter = 'all';
 let starredNews = JSON.parse(localStorage.getItem('myr-starred') || '{}');
 let newsMarkers = []; // { dateLabel, items[], px? }
 let mode = 'zoom';
+let intradayData = {};
+let isIntraday = false;
 
 // Measure state
 let measureDragging = false;
@@ -529,7 +555,23 @@ async function fetchLiveRate(fromCurrency) {
     const r = await fetch(url);
     if (!r.ok) return null;
     const d = await r.json();
-    return d?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;
+    const result = d?.chart?.result?.[0];
+    if (!result) return null;
+
+    // Extract full minute-by-minute series
+    const timestamps = result.timestamp || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    const series = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (closes[i] == null) continue;
+      const date = new Date(timestamps[i] * 1000);
+      const label = date.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', hour12:false });
+      series.push({ t: label, v: closes[i] });
+    }
+    intradayData[fromCurrency] = series;
+
+    // Still return the latest single price for sidebar/ticker
+    return result.meta?.regularMarketPrice ?? null;
   } catch { return null; }
 }
 
@@ -686,14 +728,21 @@ Chart.register(newsMarkerPlugin);
 // ════════════════════════════════════════
 function buildDatasets() {
   return CURRENCIES.filter(c => activeSet.has(c.code)).map(c => {
-    const data = currentLabels.map(label => {
-      const fullDate = new Date().getFullYear() + '-' + label;
-      // Search through history
-      for (const [date, rates] of Object.entries(ratesHistory)) {
-        if (date.slice(5) === label && rates[c.code]) return rates[c.code];
-      }
-      return null;
-    });
+    let data;
+    if (isIntraday) {
+      const series = intradayData[c.code] || [];
+      // Map series to currentLabels by time string
+      const map = {};
+      series.forEach(p => map[p.t] = p.v);
+      data = currentLabels.map(label => map[label] ?? null);
+    } else {
+      data = currentLabels.map(label => {
+        for (const [date, rates] of Object.entries(ratesHistory)) {
+          if (date.slice(5) === label && rates[c.code]) return rates[c.code];
+        }
+        return null;
+      });
+    }
     return {
       label: c.code, data,
       borderColor: c.color,
@@ -988,10 +1037,20 @@ async function setRange(idx) {
   currentRangeIdx = idx;
   document.getElementById('time-slider').value = idx;
   buildSliderLabels();
-  const days = RANGE_OPTIONS[idx].days;
-  setProgress(40, 'LOADING HISTORICAL DATA...');
-  const dates = await loadHistory(days);
-  currentLabels = dates.map(d => d.slice(5));
+  isIntraday = RANGE_OPTIONS[idx].days === 1;
+
+  if (isIntraday) {
+    setProgress(40, 'LOADING INTRADAY DATA...');
+    await loadLatest(); // this now populates intradayData too
+    // Build time labels from any currency that has data
+    const firstCur = CURRENCIES.find(c => intradayData[c.code]?.length);
+    currentLabels = firstCur ? intradayData[firstCur.code].map(p => p.t) : [];
+  } else {
+    setProgress(40, 'LOADING HISTORICAL DATA...');
+    const dates = await loadHistory(RANGE_OPTIONS[idx].days);
+    currentLabels = dates.map(d => d.slice(5));
+  }
+
   if (chart) { chart.resetZoom(); refreshChartData(); }
   else initChart();
   updateNewsMarkersOnChart();
