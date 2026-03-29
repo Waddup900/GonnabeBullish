@@ -549,29 +549,12 @@ async function fetchRatesForDate(dateStr) {
 }
 
 async function fetchLiveRate(fromCurrency) {
-  const symbol = encodeURIComponent(`${fromCurrency}MYR=X`);
-  const url = `https://corsproxy.io/?https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`;
   try {
-    const r = await fetch(url);
+    const r = await fetch(`http://localhost:3001/rate/${fromCurrency}`);
     if (!r.ok) return null;
     const d = await r.json();
-    const result = d?.chart?.result?.[0];
-    if (!result) return null;
-
-    // Extract full minute-by-minute series
-    const timestamps = result.timestamp || [];
-    const closes = result.indicators?.quote?.[0]?.close || [];
-    const series = [];
-    for (let i = 0; i < timestamps.length; i++) {
-      if (closes[i] == null) continue;
-      const date = new Date(timestamps[i] * 1000);
-      const label = date.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', hour12:false });
-      series.push({ t: label, v: closes[i] });
-    }
-    intradayData[fromCurrency] = series;
-
-    // Still return the latest single price for sidebar/ticker
-    return result.meta?.regularMarketPrice ?? null;
+    intradayData[fromCurrency] = d.series || [];
+    return d.rate ?? null;
   } catch { return null; }
 }
 
